@@ -1,0 +1,3 @@
+dipPeak
+
+DipPeak is a parzen or kernel density estimator for high-throughput sequencing data. Please see the R documentation for additional details.

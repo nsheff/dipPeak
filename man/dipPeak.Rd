@@ -1,0 +1,27 @@
+\docType{package}
+\name{dipPeak}
+\alias{dipPeak}
+\alias{dipPeak-package}
+\title{Parzen density estimation plus peak divider based on dips}
+\description{
+  dipPeak identifies peaks in high-throughput sequencing
+  data. It is designed for use with DNase-seq data, but
+  could be useful for other data types as well. It does two
+  tasks: First, identifies broad peaks (hypersensitive
+  regions), and then it divides these peaks into smaller
+  regions of interest to be considered separately.
+}
+\details{
+  It also has the advantage of allowing user control over
+  the resolution of the output density. This can allow the
+  user to determine the tradeoff between disk space and
+  resolution.
+}
+\author{
+  Nathan Sheffield
+}
+\references{
+  This has not been published but check out my web page
+  \url{http://www.nathansheffield.com}
+}
+

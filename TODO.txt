@@ -1,0 +1,27 @@
+
+
+-Add read length parameter. For dnase, it makes sense to just consider the reads at length 1, which is what I'm doing now. But this needs to be a parameter.
+
+-Allow for noise supression. For really weak regions that are clearly clearly clearly not peaks, I should just eliminate the signal track alltogether, so save space (making the density output sparse).
+
+-Maybe make a default setting for dnase, and one for chip? It looks like chip would do better with a wider window.
+
+-for chip.
+
+
+-option to Retain Scratch.
+
+
+maybe I could have used binary file writing instead of extending to C.
+zz = file(bwFile, "rb")
+rb = readBin(zz)
+readBin(zz, integer(), 500000000, size=8)
+writeBin("test.out", cov)
+
+
+bamFile = "/slow/home/nsheffield/projects/BSA_0001_ASP14/hg19/chipseq_bowtie2_11_H3K27ac_ASP14/11_H3K27ac_ASP14.aligned.sorted.bam"
+indexFile = paste(bamFile, ".bai", sep="");
+library(dipPeak)
+
+dipPeaks(BAMFILE=bamFile, BIGWIGOUT="dipPeak.out.bw", SCRATCHDIRBASE="~/scratch", OUTDIR=getwd(), INDEXFILE=indexFile, CORES=2, CHROMINFO="~/work/shared_data/chromInfo.hg19.txt", RETAIN_TEMP=TRUE, LIMIT_CHROM=c("chr22", "chr21"))
+
