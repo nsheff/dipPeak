@@ -3,7 +3,7 @@ Version: 1.0
 Title: A parzen density estimator for finding peaks in high-throughput
     sequencing data.
 Description: Fast parzen density estimation
-Author: Nathan Sheffield 
+Author: Nathan Sheffield
 Maintainer: Nathan Sheffield <sheffien@users.noreply.github.com>
 Depends:
     GenomicRanges,
@@ -14,8 +14,3 @@ Depends:
 License: Artistic-2.0
 URL: http://www.github.com/sheffien
 LazyLoad: yes
-Collate:
-    'calculateDensity.R'
-    'definePeaks.R'
-    'dipPeak.R'
-    'funcPeaks.R'

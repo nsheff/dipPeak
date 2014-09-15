@@ -8,8 +8,11 @@
 
 -for chip.
 
-
 -option to Retain Scratch.
+
+-add in background correction files for strange copy number cell lines? (like fseq)
+
+-correct for mappability?
 
 
 maybe I could have used binary file writing instead of extending to C.

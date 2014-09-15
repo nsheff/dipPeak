@@ -45,9 +45,9 @@ toc();
 	}
 	if (GENOME_WIDE_CUTOFF) {
 		#If the user requests a genome-wide cutoff, then we also will spit out a sample (default: 10%) 
-		#of every chromosome into a temporary file. This is faster that using all the data, 
+		#of every chromosome into a temporary file. This is faster than using all the data, 
 		#and more accurate than using only a single chromosome, which may be biased.
-		cat("Storing density sample...\t");
+		cat("Storing sample of density for genome-wide cutoff calculation...\t");
 		sampleFileName = paste(SCRATCHDIR, chrom, ".sample.", windowSize, "-", windowStep, ".wig", sep="")
 		file.create(sampleFileName);
 		cwriteStepR(as.vector(densityEstimate), as.numeric(length(densityEstimate)), file=sampleFileName, step=10); toc();

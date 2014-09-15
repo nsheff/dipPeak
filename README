@@ -1,3 +1,17 @@
 dipPeak
 
 DipPeak is a parzen or kernel density estimator for high-throughput sequencing data. Please see the R documentation for additional details.
+
+
+#At the cost of more CPU use and some scratch space, you can estimate the cutoff
+#using all data, instead of a different cutoff based on each
+#individual chromosome. This is highly recommended, since sometimes single 
+#chromosome cutoffs can lead to weird results.
+#GENOME_WIDE_CUTOFF = TRUE;
+
+
+
+
+#INSTALL
+git clone git@github.com:sheffien/dipPeak
+R
