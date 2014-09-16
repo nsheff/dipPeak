@@ -22,7 +22,7 @@ fitGammaCutoff = function(d, quant=0.9) {
 	#####################################################
 	#Define Broad peaks
 	#####################################################
-defineBroadPeaks = function(chrom, densityEstimate, windowCoords, SCRATCHDIR, looseQuantile,windowStep) {
+defineBroadPeaks = function(chrom, densityEstimate, windowCoords, scratchDir, looseQuantile,windowStep) {
 	cat("Defining broad peaks...\t");
 	peakCalls = Rle(densityEstimate>looseQuantile)
 	#restrict peak calls to only those that span a certain distance without dropping below the threshold.
@@ -37,18 +37,18 @@ defineBroadPeaks = function(chrom, densityEstimate, windowCoords, SCRATCHDIR, lo
 	length(peakStarts) #how many peaks ?
 	options(scipen=15) #don't print scientific notation
 	highScores = sapply(mapply(seq, peakStarts, peakEnds), function(x) { return(max(densityEstimate[x])); } )
-	write(file=paste(SCRATCHDIR, "/", chrom, ".peaks.b.bed", sep=""), rbind(chrom, windowCoords[peakStarts], windowCoords[peakEnds], 1:length(peakStarts), signif(highScores,4)), ncol=5, sep="\t"); toc();
+	write(file=paste(scratchDir, "/", chrom, ".peaks.b.bed", sep=""), rbind(chrom, windowCoords[peakStarts], windowCoords[peakEnds], 1:length(peakStarts), signif(highScores,4)), ncol=5, sep="\t"); toc();
 	peakCoords = cbind(peakStarts, peakEnds)
 	return(peakCoords);
 }
 	#####################################################
 	#Define Narrow peaks
 	#####################################################
-defineNarrowPeaks = function(chrom, densityEstimate, windowCoords, SCRATCHDIR, peakCoords) {
+defineNarrowPeaks = function(chrom, densityEstimate, windowCoords, scratchDir, peakCoords) {
 	cat("Defining narrow peaks...\t",chrom);
 	peakList = apply(peakCoords, 1, findPeaks, densityEstimate, windowCoords)
 	peaks = do.call(rbind, peakList)
-	write(file=paste(SCRATCHDIR, "/", chrom, ".peaks.dips.bed", sep=""), rbind(chrom, windowCoords[peaks[,1]], windowCoords[peaks[,2]], 1:nrow(peaks), peaks[,3]),  ncol=5, sep="\t"); toc();
+	write(file=paste(scratchDir, "/", chrom, ".peaks.dips.bed", sep=""), rbind(chrom, windowCoords[peaks[,1]], windowCoords[peaks[,2]], 1:nrow(peaks), peaks[,3]),  ncol=5, sep="\t"); toc();
 }
 
 

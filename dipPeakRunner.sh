@@ -1,0 +1,43 @@
+#!/usr/bin/env Rscript
+################################################################################
+# Kernel density estimator and peak finder - dipPeak
+# By Nathan Sheffield, Duke University, 2013; CeMM, 2014
+################################################################################
+# This script reads a BAM file for a high-throughput sequencing experiment, and  
+# uses a density estimator (in C++) to calculate a coverage density, outputs to 
+# wiggle (then converted to bigwig), and also draws a cutoff to define peaks in signal.
+#
+# It requires R packages IRangeKernels and CWriteR
+################################################################################
+# ARGUMENT PROCESSING FUNCTIONS
+################################################################################
+options(echo=FALSE);
+suppressPackageStartupMessages(library("optparse"))
+# specify our desired options in a list
+option_list <- list(
+make_option(c("-i", "--bamFile"), type="character", help="Input BAM file (REQUIRED)"),
+make_option(c("-o", "--bigWigOut"), type="character", default=NULL, help="Output bigwig file. Leave empty for no bigWig files; just peak calls [Default:NULL]"),
+make_option(c("-n", "--chromInfo"), type="character", default=NULL, help="UCSC chromInfo file (required for bigwig output)"),
+make_option(c("-s", "--scratchDirBase"), type="character", default="~", help="Path to scratch folder [Default:~]"),
+make_option(c("-f", "--outDir"), type="character", default="~", help="Path to output folder [Default:~]"),
+make_option(c("-c", "--cores"), type="integer", help="number of cores to use [Default:1]", default=1),
+make_option("--windowSize", type="integer", default=50, help="Width of sliding window [Default:50]"),
+make_option("--windowStep", type="integer", default=5, help="Step of sliding window [Default:5]"),
+make_option(c("--indexFile"), type="character", default=NULL, help="Input index of BAM file [Default:BAMFILE.bam.bai]"),
+make_option(c("-p", "--perChromCutoff"), type="logical", default=FALSE, action="store_true", help="Use genome wide cutoff [Default:F]"),
+make_option(c("-r", "--retainTemp"), type="logical", default=FALSE, action="store_true", help="Keep temporary files [Default:F]")
+)
+opt <- parse_args(OptionParser(option_list=option_list))
+if (is.null(opt$bamFile)) {
+	print_help(OptionParser(option_list=option_list));
+	q();
+}
+if (file.access(opt$bamFile) == -1) {
+	stop("bamFile does not exist! Use --help for options");
+}
+message("Loading packages...");
+suppressPackageStartupMessages(library(dipPeak));
+
+dipPeaks(opt$bamFile,  opt$bigWigOut, opt$chromInfo, opt$scratchDirBase, opt$outDir, opt$cores, opt$perChromCutoff, opt$windowSize, opt$windowStep, opt$indexFile, opt$retainTemp, opt$limitChrom)
+#dipPeaks = function(bamFile, bigWigOut=NULL, chromInfo=NULL, scratchDirBase="~", outDir="~", cores=1, perChromCutoff=FALSE, windowSize=50, windowStep=5, indexFile=NULL, retainTemp=FALSE, limitChrom=NULL) {
+
