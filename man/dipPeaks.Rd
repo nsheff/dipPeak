@@ -4,24 +4,24 @@
 \title{Estimate density and find peaks}
 \usage{
 dipPeaks(bamFile, bigWigOut = NULL, chromInfo = NULL,
-  scratchDirBase = "~", outDir = "~", cores = 1, perChromCutoff = FALSE,
-  windowSize = 50, windowStep = 5, indexFile = NULL, retainTemp = FALSE,
-  limitChrom = NULL)
+  scratchDirBase = "~", outDir = "~", kernel = "e", cores = 1,
+  perChromCutoff = FALSE, windowSize = 50, windowStep = 5,
+  indexFile = NULL, retainTemp = FALSE, limitChrom = NULL)
 }
 \arguments{
 \item{bamFile}{Input file in bam format}
 
 \item{bigWigOut}{Produce a smoothed output density file in bigwig format (using wigToBigWig)?}
 
-\item{indexFile}{Index file made from "samtools index" on the bam input file; deaults to bamFile.bai, or you can provide one.}
+\item{chromInfo}{UCSC chromInfo.txt file (required only for bigWigOut)}
 
 \item{scratchDirBase}{Directory for scratch output; use local disk for optimal processing. dipPeak writes a significant amount of data to disk as it runs, to reduce memory use. This I/O takes time, and will be faster if you use a local disk or fast mount spot.}
 
 \item{outDir}{Final folder (the files to keep will be moved here from the scratch dir).}
 
-\item{cores}{Add additional cores (up to 23) for faster processing. (Default:1)}
+\item{kernel}{'e' for Epanechinov; 'g' for Gaussian; 'm' for Mexican Hat}
 
-\item{useRle}{Boolean; offers speed and memory improvement}
+\item{cores}{Add additional cores (up to 23) for faster processing. (Default:1)}
 
 \item{perChromCutoff}{Boolean; If yes, calculates a per-chromosome; otherwise, defaults to genome-wide cutoff.}
 
@@ -29,7 +29,7 @@ dipPeaks(bamFile, bigWigOut = NULL, chromInfo = NULL,
 
 \item{windowStep}{Choose the window step (5 will take a window every 5 bases) (default:5)}
 
-\item{chromInfo}{UCSC chromInfo.txt file (required only for bigWigOut)}
+\item{indexFile}{Index file made from "samtools index" on the bam input file; deaults to bamFile.bai, or you can provide one.}
 
 \item{retainTemp}{Do you want to retain temporary files?}
 
