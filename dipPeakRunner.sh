@@ -1,4 +1,5 @@
 #!/usr/bin/env Rscript
+options(echo=FALSE);
 ################################################################################
 # Kernel density estimator and peak finder - dipPeak
 # By Nathan Sheffield, Duke University, 2013; CeMM, 2014
@@ -11,7 +12,6 @@
 ################################################################################
 # ARGUMENT PROCESSING FUNCTIONS
 ################################################################################
-options(echo=FALSE);
 suppressPackageStartupMessages(library("optparse"))
 # specify our desired options in a list
 option_list <- list(
@@ -20,6 +20,7 @@ make_option(c("-o", "--bigWigOut"), type="character", default=NULL, help="Output
 make_option(c("-n", "--chromInfo"), type="character", default=NULL, help="UCSC chromInfo file (required for bigwig output)"),
 make_option(c("-s", "--scratchDirBase"), type="character", default="~", help="Path to scratch folder [Default:~]"),
 make_option(c("-f", "--outDir"), type="character", default="~", help="Path to output folder [Default:~]"),
+make_option(c("-k", "--kernel"), type="character", help="Choose kernel shape: 'e' for Epanechinov; 'g' for Gaussian; 'm' for Mexican Hat", default="e"),
 make_option(c("-c", "--cores"), type="integer", help="number of cores to use [Default:1]", default=1),
 make_option("--windowSize", type="integer", default=50, help="Width of sliding window [Default:50]"),
 make_option("--windowStep", type="integer", default=5, help="Step of sliding window [Default:5]"),
@@ -37,7 +38,6 @@ if (file.access(opt$bamFile) == -1) {
 }
 message("Loading packages...");
 suppressPackageStartupMessages(library(dipPeak));
-
-dipPeaks(opt$bamFile,  opt$bigWigOut, opt$chromInfo, opt$scratchDirBase, opt$outDir, opt$cores, opt$perChromCutoff, opt$windowSize, opt$windowStep, opt$indexFile, opt$retainTemp, opt$limitChrom)
+dipPeaks(opt$bamFile,  opt$bigWigOut, opt$chromInfo, opt$scratchDirBase, opt$outDir,  opt$kernel, opt$cores, opt$perChromCutoff, opt$windowSize, opt$windowStep, opt$indexFile, opt$retainTemp, opt$limitChrom)
 #dipPeaks = function(bamFile, bigWigOut=NULL, chromInfo=NULL, scratchDirBase="~", outDir="~", cores=1, perChromCutoff=FALSE, windowSize=50, windowStep=5, indexFile=NULL, retainTemp=FALSE, limitChrom=NULL) {
 

@@ -43,31 +43,31 @@ makescratchDir = function(scratchDirBase, PREFIX) {
 	return(scratchDir);
 }
 
-tic <- function(gcFirst = TRUE, type=c("elapsed", "user.self", "sys.self")) {
-   type <- match.arg(type)
-   assign(".type", type, envir=baseenv())
-   if(gcFirst) gc(FALSE)
-   tic <- proc.time()[type]         
-   assign(".tic", tic, envir=baseenv())
-   invisible(tic)
+secToTime = function(timeInSec) {
+	hr = timeInSec %/% 3600 #hours
+	min = timeInSec %% 3600 %/% 60 #minutes
+	sec = timeInSec %% 60 #seconds
+	return(paste0(sprintf("%02d", hr), "h ", sprintf("%02d", min), "m ", sprintf("%02.01f", signif(sec, 3)), "s"))
 }
+
+tic <- function(gcFirst = TRUE, type=c("elapsed", "user.self", "sys.self")) {
+	type <- match.arg(type)
+	assign(".type", type, envir=baseenv())
+	if(gcFirst) gc(FALSE)
+	tic <- proc.time()[type]         
+	assign(".tic", tic, envir=baseenv())
+	invisible(tic)
+	}
 
 toc <- function() {
 	type <- get(".type", envir=baseenv())
 	toc <- proc.time()[type]
 	tic <- get(".tic", envir=baseenv())
 	timeInSec = as.numeric(toc-tic);
-	timeInSecTxt = paste0(signif(timeInSec, 4), "s");
-	timeInMinTxt = "";
-	message = paste0("<time:", timeInSecTxt, ">");
-	if (timeInSec > 120) {
-		timeInMin = timeInSec/60;
-		timeInMinTxt = paste0(signif(timeInMin,4), "m");
-		message = paste0("<time:", timeInSecTxt, "; ", timeInMinTxt, ">");
-	} 
-	message(message, appendLF=FALSE)
+	message("<", secToTime(timeInSec), ">", appendLF=FALSE)
 	invisible(toc)
 }
+
 
 
 ################################################################################
@@ -80,22 +80,23 @@ toc <- function() {
 #'
 #' @param bamFile	Input file in bam format
 #' @param bigWigOut	Produce a smoothed output density file in bigwig format (using wigToBigWig)?
-#' @param indexFile	Index file made from "samtools index" on the bam input file; deaults to bamFile.bai, or you can provide one.
+#' @param chromInfo		UCSC chromInfo.txt file (required only for bigWigOut)
 #' @param scratchDirBase	Directory for scratch output; use local disk for optimal processing. dipPeak writes a significant amount of data to disk as it runs, to reduce memory use. This I/O takes time, and will be faster if you use a local disk or fast mount spot.
 #' @param outDir	Final folder (the files to keep will be moved here from the scratch dir).
+#' @param kernel		'e' for Epanechinov; 'g' for Gaussian; 'm' for Mexican Hat
 #' @param cores		Add additional cores (up to 23) for faster processing. (Default:1)
-#' @param useRle	Boolean; offers speed and memory improvement
 #' @param perChromCutoff 	Boolean; If yes, calculates a per-chromosome; otherwise, defaults to genome-wide cutoff.
 #' @param windowSize 	Choose the size of the smoothing window (default:50)
 #' @param windowStep 	Choose the window step (5 will take a window every 5 bases) (default:5)
-#' @param chromInfo		UCSC chromInfo.txt file (required only for bigWigOut)
+#' @param indexFile	Index file made from "samtools index" on the bam input file; deaults to bamFile.bai, or you can provide one.
 #' @param retainTemp 	Do you want to retain temporary files?
 #' @param limitChrom 	You can limit the smoothing to a list of chromosomes (defaults to everything in the bam file)
 #' @export
 #' @examples
 #' dipPeaks("sequences.bam", bigWigOut="density.bw", outDir="outDir", cores=8);
-dipPeaks = function(bamFile, bigWigOut=NULL, chromInfo=NULL, scratchDirBase="~", outDir="~", cores=1, perChromCutoff=FALSE, windowSize=50, windowStep=5, indexFile=NULL, retainTemp=FALSE, limitChrom=NULL) {
+dipPeaks = function(bamFile, bigWigOut=NULL, chromInfo=NULL, scratchDirBase="~", outDir="~", kernel="e", cores=1, perChromCutoff=FALSE, windowSize=50, windowStep=5, indexFile=NULL, retainTemp=FALSE, limitChrom=NULL) {
 
+### Process arguments
 genomeWideCutoff = !perChromCutoff; 
 useRle=TRUE; #RLE is now the only option.
 #Check all options
@@ -112,6 +113,7 @@ if (!is.null(bigWigOut)) {
 
 scratchDir=makescratchDir(scratchDirBase, PREFIX="dp");
 if(file.access(scratchDir, mode=2) != 0) stop("Scratch dir [", scratchDir, "] not writable!\n");
+on.exit(cleanUp(retainTemp, scratchDir))
 
 outDir = path.expand(outDir);
 dir.create(outDir, showWarnings=FALSE, recursive=TRUE);
@@ -122,27 +124,55 @@ if (is.null(indexFile)) {
 	indexFile=paste0(bamFile, ".bai"); #default index naming
 }
 
+### Kernel
+#windowSize=50
+x = (-(windowSize):(windowSize))/windowSize
+ws=windowSize #bases on each side of the center base.
+if(kernel == 'g') { #Gaussian
+	kernelPrecise = dnorm(-(ws):(ws), mean=0, sd=ws/4) #kernelGaussian: a lower standard deviation will give you greater precision, higher will give a smoother density.
+} else if (kernel == 'e') { #Epanechinokov
+	kernelPrecise = (3/4) * (1-x^2) #kernelEpanechinokov
+} else if (kernel == 'm') { #Mexican Hat
+	
+	sigma=1
+	x = seq(from=-3.5, to=3.5, length.out=(ws*2+1))
+	mh =  (1-((x^2)/(sigma^2)))*exp(-(x^2)/(2*sigma^2))
+	mexicanHat = mh*ws/sum(abs(mh))
+	mpe = .5 *(3/4) * (1-x^2) + .5 * mexicanHat
+	kernelPrecise = mpe
+} else {
+	stop("Unrecognized kernel option.");
+}
+#You can also play with combining kernels.
+
+
+#kernelNarrow = signif(mexicanHat, 4);
+kernelWeights = signif(kernelPrecise,4)
+
+
+### Output options for log files:
+message("bamFile:", bamFile);
+message("bigWigOut:", bigWigOut);
+message("chromInfo:", chromInfo);
+message("scratchDirBase:", scratchDirBase);
+message("scratchDir:", scratchDir);
+message("outDir:", outDir);
+message("cores:", cores);
+message("perChromCutoff:", perChromCutoff);
+message("windowSize:", windowSize);
+message("windowStep:", windowStep);
+message("indexFile:", indexFile);
+message("retainTemp:", retainTemp);
+message("limitChrom:", limitChrom);
+message("kernel:", kernel);
+
+
+
+#tryCatch( { #for cleaning up temporary files.
 cat("Copy input files to scratch space:", scratchDir, "...\n")
 system(paste("cp", indexFile, scratchDir), wait=FALSE)
 system(paste("cp", bamFile, scratchDir), wait=TRUE)
 scratchBam = paste(scratchDir, basename(bamFile), sep="");
-
-
-#h=150 #bases on each side of the center base.
-#sigma=1
-#x = seq(from=-3.5, to=3.5, length.out=(h*2+1))
-#mh =  (1-((x^2)/(sigma^2)))*exp(-(x^2)/(2*sigma^2))
-#mexicanHat = mh*h/sum(abs(mh))
-
-#windowSize=50
-x = (-(windowSize):(windowSize))/windowSize
-precomputedEpanechinokov = (3/4) * (1-x^2)
-#precomputedGaussian = dnorm(-(h):(h), mean=0, sd=h/4) #a lower standard deviation will give you greater precision, higher will give a smoother density.
-#mpe = .5 *precomputedEpanechinokov + .5 * mexicanHat
-
-#windowStep=5
-#kernelNarrow = signif(mexicanHat, 4);
-kernelWeights = signif(precomputedEpanechinokov,4)
 
 #genomeInfo = GRangesForUCSCGenome(genome="hg19")
 idx = get_idxstats(scratchBam);
@@ -186,6 +216,7 @@ if (genomeWideCutoff) {
 	sampleScores = scan(file=paste(scratchDir, "/densitySample.wig", sep=""), allowEscapes=TRUE)
 	#the step ones are small enough that this can probably be fast.
 	looseQuantile = fitGammaCutoff(sampleScores, 0.9);
+	if (is.nan(looseQuantile)) { stop("looseQuantile is NaN; try a different kernel"); }
 	cat("Cutoff:",looseQuantile,"\n");
 	rm(sampleScores); gc(); toc();		#free up some memory
 	cat("Finding peaks...");
@@ -197,6 +228,7 @@ if (genomeWideCutoff) {
 	}
 }
 
+message("\nPeak finding complete.")
 system(paste("cat `ls ", scratchDir,"chr*.peaks.dips.bed` > ", outDir, "/peaks.dips.bed", sep=""))
 system(paste("cat `ls ", scratchDir,"chr*.peaks.b.bed` > ", outDir, "/peaks.b.bed", sep=""))
 BEDSORT_RESULT = system(paste("bedSort ", outDir, "/peaks.dips.bed ", outDir, "/peaks.dips.bed", sep=""));
@@ -204,7 +236,7 @@ BEDSORT_RESULT2 = system(paste("bedSort ", outDir, "/peaks.b.bed ", outDir, "/pe
 
 if (BEDSORT_RESULT + BEDSORT_RESULT2 > 0) {
 	warning("Warning; Bedsort failed. Is bedsort installed?\n");
-	}
+}
 
 
 outputDensity_RESULT=0;
@@ -215,12 +247,60 @@ scratchOutfile = paste(scratchDir, basename(bigWigOut), sep="");
 	cat("Building density bigwig... Command:", makeBigWig, "\n");
 	tic();outputDensity_RESULT = system(makeBigWig, wait=TRUE);toc();
 }
-
 if (!retainTemp & outputDensity_RESULT == 0) { #success bigwig!
-	system(paste("rm -rf", scratchDir))
-	message("\nPeak finding complete, see folder [", outDir, "]")
+	message("\nDipPeak run finished, output folder [", outDir, "]")
 } else {
-	message("\nFailed! Check scratch dir: ", scratchDir);
+	message("\nbigWigOut process failed!");
 }
+### closing tryCatch code.
+#}, interrupt= function(x) { print(x) },
+#error = function(x) { print(x) },
+#finally = cleanUp(retainTemp, scratchDir)) #end tryCatch
 }#END PARENT FUNCTION
+
+################################################################################
+#FUNCTION DOCUMENTATION - dipPeaks() main function
+#' Just a display of what the different kernels look like.
+#' @param windowSize	window size on the two sides of the center.
+#@export
+plotKernels = function(windowSize=50) {
+	ws=windowSize #bases on each side of the center base.
+	x = (-(ws):(ws))/ws
+	kernelGaussian = dnorm(-(ws):(ws), mean=0, sd=ws/4) #kernelGaussian
+	kernelEpanechinokov = (3/4) * (1-x^2) #kernelEpanechinokov
+	sigma=1
+	x = seq(from=-3.5, to=3.5, length.out=(ws*2+1))
+	mh =  (1-((x^2)/(sigma^2)))*exp(-(x^2)/(2*sigma^2))
+	kernelMexicanHat = mh*ws/sum(abs(mh))
+	mpe = .5 *kernelEpanechinokov + .5 * kernelMexicanHat
+	par(pty="s");
+	ymin = min(kernelGaussian, kernelEpanechinokov, kernelMexicanHat, mpe)
+	plot(kernelMexicanHat/max(kernelMexicanHat), type="l", main="Kernels", ylab="Signal Density", xlab="Nucleotides", lwd=2, ylim=c(ymin,1))
+	lines(kernelGaussian/max(kernelGaussian), col="blue", lwd=2)
+	lines(kernelEpanechinokov/max(kernelEpanechinokov), col="red", lwd=2)
+	lines(mpe/max(mpe), col="maroon", lwd=2)
+	legend('topright', c("mexican hat", "gaussian", "epanechinokov", "epa + mh"), col=c("black", "blue", "red", "maroon"), lwd=2, cex=.7)
+}
+#plotKernels()
+
+#' Internal function to remove temporary files on interrupt or completion.
+cleanUp = function(retainTemp, scratchDir) {
+	if (!retainTemp) {
+		message('\nCleaning up temporary files in scratchDir:\t', scratchDir, '...');
+		unlink(scratchDir, recursive=TRUE);
+	} else {
+		message('\nTemporary files have been retained in scratchDir:\t', scratchDir);
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
 
