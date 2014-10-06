@@ -1,20 +1,20 @@
 dipPeak
 
-DipPeak is a parzen or kernel density estimator for high-throughput sequencing data. Please see the R documentation for additional details.
+DipPeak is a kernel density estimator for high-throughput sequencing data. Please see the R documentation for additional details.
 
 ################################################################################
 #HOW TO INSTALL
-dipPeak relies on 2 other R packages I wrote. You can get the latest source from github (these are public). To install the 3 packages, you can do:
+dipPeak relies on 2 other R packages I wrote. You can get the latest source from github (these are public). 
 
-#The easy way: install directly from github into R:
-library(devtools)
-install_github("IRangeKernels", username="sheffien") #public
-install_github("CWriteR", username="sheffien") #public
-install_github("dipPeak", username="sheffien", auth_user="YOUR_USERNAME", auth_token="YOUR PAT") #private
+#There are 2 ways to install dipPeak and its dependencies.
+#1. The easy way: install directly from github into R:
+require(devtools)
+install_github("sheffien/IRangeKernels") #public
+install_github("sheffien/CWriteR") #public
+install_github("sheffien/dipPeak", "YOUR_USERNAME", auth_token="YOUR PAT") #private
 #Create your PAT (personal access token) here: https://github.com/settings/applications
 
-################################################################################
-#The hard way: you can clone the repos and then install locally, instead of directly from github. Here are some basic commands to go this route:
+#2. The hard way: you can clone the repos and then install locally, instead of directly from github. Here are some basic commands to go this route:
 
 #Get public repos:
 git clone http://github.com/sheffien/IRangeKernels.git
@@ -23,10 +23,6 @@ git clone http://github.com/sheffien/CWriteR.git
 #then get the dipPeak source. (This is still private so you will have to have an ssh key set up to clone in this way).
 git clone git@github.com:sheffien/dipPeak.git
 
-#if you've already cloned them, you can update later with git pull:
-cd dipPeak
-git pull
-
 #Once you have these, start R and install them.
 R
 install.packages("path/to/IRangeKernels", repos=NULL)
@@ -34,25 +30,34 @@ install.packages("path/to/CWriteR", repos=NULL)
 install.packages("path/to/dipPeak", repos=NULL)
 
 ################################################################################
-#Running 
-#You have 2 options: Run from within R, or use a command-line helper script.
+#HOW TO UPDATE
+#If you installed by cloning repos, can update later with git pull:
+cd dipPeak
+git pull
+
+#If you installed directly from github with install_github, just reinstall to update.
+
+################################################################################
+#HOW TO RUN
+#You have 2 options: Use a helper script to run on the command line, or run from within R directly.
+#1 ON THE COMMAND LINE 
 #To use the command-line runner, you must have the R package "optparse" installed.
 install.packages("optparse")
 
 #You can then run it on the command line like this to see options:
 ./dipPeakRunner.sh
 
-#Or you can load the package and run from within R like so:
+#2 DIRECTLY FROM WITHIN R
+#You can load the package and run from within R like so:
 library(dipPeak)
 ?dipPeaks
 
 ################################################################################
 #Some Misc Documentation:
-#At the cost of more CPU use and some scratch space, you can estimate the cutoff
+#By default, dipPeak estimates the peak detection cutoff
 #using all data, instead of a different cutoff based on each
 #individual chromosome. This is highly recommended, since sometimes single 
 #chromosome cutoffs can lead to weird results.
-#GENOME_WIDE_CUTOFF = TRUE;
 
 
 
