@@ -1,10 +1,14 @@
 
-calculateDensity = function(chrom, genomeInfo, scratchBam, windowSize, windowStep, kernelWeights,  scratchDir, useRle, outputDensity, genomeWideCutoff) {
+calculateDensity = function(chrom, genomeInfo, scratchBam, windowSize, windowStep, kernelWeights,  scratchDir, useRle, outputDensity, genomeWideCutoff, deduplicate=TRUE) {
 	message("\n[", chrom, "]\t", appendLF=FALSE);
 	message("Loading sequences...\t", appendLF=FALSE);
 	wholeChrom =  genomeInfo[seqnames(genomeInfo) == chrom]
 	what = c("rname", "strand", "pos")
+	if (deduplicate) {
+	param = ScanBamParam(which = wholeChrom, what=what, flag=scanBamFlag(isDuplicate=FALSE))
+	} else {
 	param = ScanBamParam(which = wholeChrom, what=what)
+	}
 	sb = scanBam(scratchBam, param=param);toc();
 	message("\nCalculating density...\t", appendLF=FALSE);
 	name <- names(sb)
