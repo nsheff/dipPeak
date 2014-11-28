@@ -94,7 +94,7 @@ toc <- function() {
 #' @export
 #' @examples
 #' dipPeaks("sequences.bam", bigWigOut="density.bw", outDir="outDir", cores=8);
-dipPeaks = function(bamFile, bigWigOut=NULL, chromInfo=NULL, scratchDirBase="~", outDir="~", kernel="e", cores=1, perChromCutoff=FALSE, windowSize=50, windowStep=5, indexFile=NULL, retainTemp=FALSE, limitChrom=NULL) {
+dipPeaks = function(bamFile, bigWigOut=NULL, peakOut=NULL, chromInfo=NULL, scratchDirBase="~", outDir=NULL, kernel="e", cores=1, perChromCutoff=FALSE, windowSize=50, windowStep=5, indexFile=NULL, retainTemp=FALSE, limitChrom=NULL) {
 
 ### Process arguments
 genomeWideCutoff = !perChromCutoff; 
@@ -111,10 +111,20 @@ if (!is.null(bigWigOut)) {
 	outputDensity = FALSE;
 }
 
+if(is.null(peakOut)) {
+	if(is.null(bigWigOut)) {
+		peakOut = "peaks"; #default file name
+	} else {
+		peakOut=paste0(bigWigOut, ".peaks");
+	}
+}
+
 scratchDir=makescratchDir(scratchDirBase, PREFIX="dp");
 if(file.access(scratchDir, mode=2) != 0) stop("Scratch dir [", scratchDir, "] not writable!\n");
 on.exit(cleanUp(retainTemp, scratchDir))
-
+if (is.null(outDir)) {
+	outDir = getwd();
+}
 outDir = path.expand(outDir);
 dir.create(outDir, showWarnings=FALSE, recursive=TRUE);
 if(file.access(outDir, mode=2) != 0) stop("Output dir [", outDir, "] not writable!\n");
@@ -227,12 +237,13 @@ if (genomeWideCutoff) {
 		result = lapply(chromlist, defineAllPeaks, scratchDir, windowSize, windowStep, windowCount, looseQuantile)
 	}
 }
-
+peakOutDips = paste0(peakOut, ".dips.bed");
+peakOutBroad = paste0(peakOut, ".broad.bed");
 message("\nPeak finding complete.")
-system(paste("cat `ls ", scratchDir,"chr*.peaks.dips.bed` > ", outDir, "/peaks.dips.bed", sep=""))
-system(paste("cat `ls ", scratchDir,"chr*.peaks.b.bed` > ", outDir, "/peaks.b.bed", sep=""))
-BEDSORT_RESULT = system(paste("bedSort ", outDir, "/peaks.dips.bed ", outDir, "/peaks.dips.bed", sep=""));
-BEDSORT_RESULT2 = system(paste("bedSort ", outDir, "/peaks.b.bed ", outDir, "/peaks.b.bed", sep=""));
+system(paste("cat `ls ", scratchDir,"chr*.peaks.dips.bed` > ", outDir, "/", peakOutDips, sep=""))
+system(paste("cat `ls ", scratchDir,"chr*.peaks.b.bed` > ", outDir, "/", peakOutBroad, sep=""))
+BEDSORT_RESULT = system(paste("bedSort ", outDir, "/", peakOutDips, " ", outDir, "/", peakOutDips, sep=""));
+BEDSORT_RESULT2 = system(paste("bedSort ", outDir, "/", peakOutBroad, " ", outDir, "/", peakOutBroad, sep=""));
 
 if (BEDSORT_RESULT + BEDSORT_RESULT2 > 0) {
 	warning("Warning; Bedsort failed. Is bedsort installed?\n");
@@ -250,7 +261,7 @@ scratchOutfile = paste(scratchDir, basename(bigWigOut), sep="");
 if (!retainTemp & outputDensity_RESULT == 0) { #success bigwig!
 	message("\nDipPeak run finished, output folder [", outDir, "]")
 } else {
-	message("\nbigWigOut process failed!");
+	message("\nbigWigOut process failed! Couldn't create a bigwig file with wigToBigWig.");
 }
 ### closing tryCatch code.
 #}, interrupt= function(x) { print(x) },
