@@ -37,7 +37,9 @@ defineBroadPeaks = function(chrom, densityEstimate, windowCoords, scratchDir, lo
 	length(peakStarts) #how many peaks ?
 	options(scipen=15) #don't print scientific notation
 	highScores = sapply(mapply(seq, peakStarts, peakEnds), function(x) { return(max(densityEstimate[x])); } )
-	write(file=paste(scratchDir, "/", chrom, ".peaks.b.bed", sep=""), rbind(chrom, windowCoords[peakStarts], windowCoords[peakEnds], 1:length(peakStarts), signif(highScores,4)), ncol=5, sep="\t"); toc();
+	#convert scores to the UCSC bed format 1-1000 scale.
+	highScores = round( (highScores/max(highScores)) * 1000 ); #signif(highScores,4))
+	write(file=paste(scratchDir, "/", chrom, ".peaks.b.bed", sep=""), rbind(chrom, windowCoords[peakStarts], windowCoords[peakEnds], 1:length(peakStarts), highScores, ncol=5, sep="\t"); toc();
 	peakCoords = cbind(peakStarts, peakEnds)
 	return(peakCoords);
 }
@@ -48,6 +50,8 @@ defineNarrowPeaks = function(chrom, densityEstimate, windowCoords, scratchDir, p
 	cat("Defining narrow peaks...\t",chrom);
 	peakList = apply(peakCoords, 1, findPeaks, densityEstimate, windowCoords)
 	peaks = do.call(rbind, peakList)
+	#convert scores to the UCSC bed format 1-1000 scale.
+	peaks[,3] = round( ( peaks[,3]/max( peaks[,3])) * 1000 );
 	write(file=paste(scratchDir, "/", chrom, ".peaks.dips.bed", sep=""), rbind(chrom, windowCoords[peaks[,1]], windowCoords[peaks[,2]], 1:nrow(peaks), peaks[,3]),  ncol=5, sep="\t"); toc();
 }
 
